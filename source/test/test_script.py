@@ -2,7 +2,7 @@ import os
 import sys
 import traceback
 
-# sys.path.insert(1, os.path.join(sys.path[0], '..'))
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from pdz_tool_extended.pdz_tool import PDZTool
 
 
