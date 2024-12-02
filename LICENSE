@@ -1,6 +1,9 @@
 MIT License
 
-Copyright (c) 2024 Olive Groves
+pdz-tool Copyright (c) 2024 Bruno Ducraux with changes made by Lars Maxfield
+Interface created by Lars Maxfield
+Image extraction adapted from read_pdz Copyright (c) 2024 Frank Ligterink
+Icon by Good Stuff Non Sense, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
