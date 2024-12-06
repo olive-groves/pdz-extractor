@@ -1,4 +1,4 @@
-"""Run the pdz-tool interface. 
+"""Run the pdz-tool interface.
 """
 
 

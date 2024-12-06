@@ -434,6 +434,7 @@ class PdzToolGui(tk.Frame):
         button.state(["disabled"])
         Tooltip(button, text="Extract output and save as files")
         self._extract_and_save_button = button
+        self._extract_and_save_default_text = text
 
     def clicked_extract_and_save(self):
         pdzs = self.pdz_tools
@@ -485,15 +486,15 @@ class PdzToolGui(tk.Frame):
                 self.save_spectra_and_images(pdz, save_spectra, save_images)
                 saved.append(file_name)
         return saved, not_saved
-    
+
     @property
     def save_csv_value(self):
         return self._save_csv_value.get()
-    
+
     @property
     def save_jpg_value(self):
         return self._save_jpg_value.get()
-    
+
     @property
     def overwrite_value(self):
         return self._overwrite_value.get()
@@ -522,7 +523,6 @@ class PdzToolGui(tk.Frame):
                     output_suffix=image_suffix
                     )
 
-        
     def update_extract_and_save_button(self):
         button = self._extract_and_save_button
 
@@ -530,11 +530,11 @@ class PdzToolGui(tk.Frame):
 
         save_csv = self.save_csv_value
         save_jpg = self.save_jpg_value
-        
+
         overwrite_existing = self.overwrite_value
         existing_csv = False
         existing_jpg = False
-        
+
         if files and any([save_csv, save_jpg]):
             if any([existing_csv, existing_jpg]) and not overwrite_existing:
                 button.state(["disabled"])
@@ -542,6 +542,18 @@ class PdzToolGui(tk.Frame):
                 button.state(["!disabled"])
         else:
             button.state(["disabled"])
+
+        s = "s" if len(files) > 1 else ""
+        if save_csv and not save_jpg:
+            text = f"Extract & Save CSV{s}"
+        elif save_jpg and not save_csv:
+            text = f"Extract & Save Images"
+        elif save_csv and save_jpg:
+            text = f"Extract & Save All"
+        else:
+            text = self._extract_and_save_default_text
+
+        button.configure(text=text)
 
     def draw_about_button(self, row: int):
         col = -1
