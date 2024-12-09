@@ -690,15 +690,15 @@ class PdzToolGui(tk.Frame):
     def show_about(self):
         title = self._window.title()
         showinfo(title,
-                 """pdz-tool GUI
+                 """PDZ Extractor: GUI for pdz-tool
 
-https://github.com/olive-groves/pdz-tool-gui
+https://github.com/olive-groves/pdz-extractor
 
 MIT License
 
-pdz-tool Copyright (c) 2024 Bruno Ducraux (github.com/bducraux), changes made by Lars Maxfield (github.com/larsmaxfield)
+pdz-tool Copyright (c) 2024 Bruno Ducraux (github.com/bducraux) with e changes made by Lars Maxfield (github.com/larsmaxfield)
 
-Interface created by Lars Maxfield (github.com/larsmaxfield)
+User interface created by Lars Maxfield (github.com/larsmaxfield)
 
 Image extraction adapted from read_pdz Copyright (c) 2024 Frank Ligterink (github.com/fligt)
 
