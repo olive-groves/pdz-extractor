@@ -61,13 +61,14 @@ class PdzToolGui(tk.Frame):
         self._csv_suffix = '.pdz'
         self._image_suffix = '-'
         self._image_record_name = 'Image Details'
+        self._extensions = ["csv", "jpeg"]
 
         self.pdz_tools = []
 
         self._default_output_text = "No files or folder selected"
 
         self._save_csv = True
-        self._save_jpg = True
+        self._save_jpeg = True
 
         self._pad = (5, 5)
 
@@ -109,59 +110,72 @@ class PdzToolGui(tk.Frame):
         filepaths = self.pdz_file_paths
         folders = create_folders(paths=filepaths)
         return folders
-    
+
     @property
     def predicted_output_filenames(self):
         filenames_pdzs = []
         pdzs = self.pdz_tools
         for pdz in pdzs:
-            filenames = []
+            filenames = {}
             stem_name = pdz.pdz_file_name
 
             csv_name = self.predict_csv_filename(stem_name)
-            filenames.append(csv_name)
+            filenames.update({"csv": [csv_name]})
 
             image_record = pdz.parsed_data.get(self._image_record_name, 0)
             if not image_record:
-                filenames.append("No images found in PDZ")
+                image_names = []
             else:
                 n_images = image_record['num_images']
                 image_names = self.predict_image_filenames(stem_name, n_images)
-                filenames += image_names
+            filenames.update({"jpeg": image_names})
 
             filenames_pdzs.append(filenames)
 
         return filenames_pdzs
-    
+
     def predict_csv_filename(self, pdz_stem_name: str):
         suffix = self._csv_suffix
         predicted_name = pdz_stem_name + suffix + '.csv'
         return predicted_name
-    
+
     def predict_image_filenames(self, pdz_stem_name: str, n: int):
         predicted_names = []
         suffix = self._image_suffix
         for i in range(n):
             predicted_names.append(pdz_stem_name + suffix + f'{i}.jpeg')
         return predicted_names
-    
+
     @property
     def exists_output_filenames(self):
         predicted_filenames_by_pdz = self.predicted_output_filenames
         exists_filenames_by_pdz = []
+        n_exists = {}
+        for extension in self._extensions:
+            n_exists[extension] = 0
         pdz_file_paths = self.pdz_file_paths
-        for (i, pdz_file_path) in enumerate(pdz_file_paths):
-            predicted_filenames = predicted_filenames_by_pdz[i]
-            exists_filenames = []
-            for predicted_filename in predicted_filenames:
-                extension = predicted_filename.split(".")[-1]
+        for (pdz_file_path, predicted_filenames_of_pdz) in zip(pdz_file_paths, predicted_filenames_by_pdz):
+            exists_filenames = {}
+            for extension, predicted_filenames in predicted_filenames_of_pdz.items():
                 likenamed = get_likenamed_filepaths_with_extension(path=pdz_file_path, extension=extension)
-                exists = any(predicted_filename in name for name in likenamed)
-                exists_filenames.append(exists)
+                exists = []
+                for predicted_filename in predicted_filenames:
+                    does_predicted_filename_exist = any(predicted_filename in name for name in likenamed)
+                    exists.append(does_predicted_filename_exist)
+                exists_filenames[extension] = exists
+                n_exists[extension] += sum(exists)
             exists_filenames_by_pdz.append(exists_filenames)
+        return exists_filenames_by_pdz, n_exists
 
-        return exists_filenames_by_pdz
-    
+    @property
+    def output_extensions(self):
+        extensions = []
+        if self.save_csv_value:
+            extensions.append("csv")
+        if self.save_jpeg_value:
+            extensions.append("jpeg")
+        return extensions
+
     def draw_output(self, row: int):
         frame = tk.Frame(master=self._window)
         frame.grid(sticky="nsew",
@@ -181,23 +195,25 @@ class PdzToolGui(tk.Frame):
         self._scroll = scroll
 
     def update_exists_label(self):
-        exists_filenames = self.exists_output_filenames
-        label = self._exists_label
-        if any(True in exists_filename for exists_filename in exists_filenames):
-            text = "One or more output files already exist"
-            foreground = "red"
-        else:
-            text = ""
-            foreground = "black"
-        label.config(text=text, foreground=foreground)
+        assert self._exists_label, "Label indicating preexistence of file(s) is not defined."
+        _, n_exists = self.exists_output_filenames
+        extensions_to_save = self.output_extensions
+        text = ""
+        for extension, n in n_exists.items():
+            if n and any(extension in ext for ext in extensions_to_save):
+                text += "; " if text else ""
+                text += f"{n} {extension.upper()}{'s'[:n^1]} already exist{'s'[n^1:]}"
+        foreground = "red" if any(n in n for n in n_exists) else "black"
+        self._exists_label.config(text=text, foreground=foreground)
 
     def update_output(self):
         text = self._default_output_text
         folders = self.pdz_folders
         predicted_filenames = self.predicted_output_filenames
-        exists_filenames = self.exists_output_filenames
+        exists_filenames, n_exists = self.exists_output_filenames
+        save_extensions = self.output_extensions
         if folders:
-            text = self.generate_output_text(folders, append_items=predicted_filenames, exists_items=exists_filenames)
+            text = self.generate_output_text(folders, append_items=predicted_filenames, exists_items=exists_filenames, save_extensions=save_extensions)
         scroll = self._scroll
         scroll.replace(text=text)
 
@@ -206,15 +222,20 @@ class PdzToolGui(tk.Frame):
         self.update_exists_label()
         self.update_extract_and_save_button()
 
-    def generate_output_text(self, folders: list=[], append_items: list=[], exists_items: list=[]):
-        """Generate output text from a list of Folder objects, appended items, and whether those items exist."""
+    def generate_output_text(
+            self,
+            folders: list = [],
+            append_items: list[dict] = [],
+            exists_items: list[dict] = [],
+            save_extensions: list = []):
+        """Generate output text from a list of Folder objects, appended items, whether those items exist, and whether those items with extensions will be saved."""
         folderbreak = "\n\n\n"
         filebreak = "\n\n"
         itembreak = "\n"
         tab = "    "
         text = ""
-        exist_prefix_true = tab
-        exist_prefix_false = tab[:-1] + "*"
+        save_prefix_true = tab[:-1] + "*"
+        save_prefix_false = tab
         exist_suffix_true = tab + "-> File already exists"
         exist_suffix_false = ""
         a = -1
@@ -232,22 +253,31 @@ class PdzToolGui(tk.Frame):
                 lines += filename
                 items = append_items[a]
                 exists = exists_items[a]
-                for (iii, item) in enumerate(items):
+                for iii, (extension, items_of_extension) in enumerate(items.items()):
+                    save = any(extension in ext for ext in save_extensions)
+                    exists_of_extension = exists[extension]
                     level = 2
-                    exist = exists[iii]
-                    if iii == 0:
-                        lines += "\n"
-                    lines += itembreak
-                    lines += tab*(level-1)
-                    if exist:
-                        lines += exist_prefix_true
-                    else:
-                        lines += exist_prefix_false
-                    lines += item
-                    if exist:
-                        lines += exist_suffix_true
-                    else:
-                        lines += exist_suffix_false
+                    if not items_of_extension:
+                        if iii == 0:
+                            lines += "\n"
+                        lines += itembreak
+                        lines += tab*(level-1)
+                        lines += save_prefix_false
+                        lines += f"No {extension.upper()}s to extract from this PDZ"
+                    for item, exist in zip(items_of_extension, exists_of_extension):
+                        if iii == 0:
+                            lines += "\n"
+                        lines += itembreak
+                        lines += tab*(level-1)
+                        if save:
+                            lines += save_prefix_true
+                        else:
+                            lines += save_prefix_false
+                        lines += item
+                        if exist:
+                            lines += exist_suffix_true
+                        else:
+                            lines += exist_suffix_false
 
             text += lines
 
@@ -324,11 +354,11 @@ class PdzToolGui(tk.Frame):
             pdz_tool = PDZTool(file_path)
             pdz_tool.parse()
             pdz_tools.append(pdz_tool)
-        
+
         self.pdz_tools = pdz_tools
         self.update()
         return True
-    
+
     def clicked_open_directory(self):
         directory = self.open_directory_dialog()
         self.open_directory(directory=directory)
@@ -341,14 +371,14 @@ class PdzToolGui(tk.Frame):
         directory = filedialog.askdirectory(title="Select Folder with PDZ file(s)",
                                               initialdir=initial_path)
         return directory
-    
+
     def open_directory(self, directory: str=[]):
         pdz_filepaths = get_filepaths_with_extension_in_directory(path=directory, extension=".pdz")
         self.open_files(pdz_filepaths)
 
     def draw_settings(self, row: int,
                            save_csv: bool=True,
-                           save_jpg: bool=True,
+                           save_jpeg: bool=True,
                            overwrite: bool=False):
         frame = tk.Frame(master=self._window)
         frame.grid(sticky="sew",
@@ -380,11 +410,11 @@ class PdzToolGui(tk.Frame):
         self._save_csv_checkbox = checkbox
 
         col += 1
-        self._save_jpg_value = tk.BooleanVar(value=save_jpg)
+        self._save_jpeg_value = tk.BooleanVar(value=save_jpeg)
         checkbox = ttk.Checkbutton(
             frame,
             text="Include images (JPEG)",
-            variable=self._save_jpg_value,
+            variable=self._save_jpeg_value,
             onvalue=True,
             offvalue=False,
             command=self.update)
@@ -394,7 +424,7 @@ class PdzToolGui(tk.Frame):
                       padx=self._pad, pady=self._pad)
         Tooltip(checkbox,
                 text="Save images during Extract & Save""")
-        self._save_jpg_checkbox = checkbox
+        self._save_jpeg_checkbox = checkbox
 
         col += 1
         label = ttk.Label(frame,
@@ -404,7 +434,7 @@ class PdzToolGui(tk.Frame):
                    column=col, row=0,
                    padx=self._pad, pady=self._pad)  
         self._exists_label = label
-        
+
         col += 1
         self._overwrite_value = tk.BooleanVar(value=overwrite)
         checkbox = ttk.Checkbutton(
@@ -434,114 +464,199 @@ class PdzToolGui(tk.Frame):
         button.state(["disabled"])
         Tooltip(button, text="Extract output and save as files")
         self._extract_and_save_button = button
+        self._extract_and_save_default_text = text
 
     def clicked_extract_and_save(self):
         pdzs = self.pdz_tools
-        exists = self.exists_output_filenames
+        exists, _ = self.exists_output_filenames
         overwrite = self.overwrite_value
         save_spectra = self.save_csv_value
-        save_images = self.save_jpg_value
-        saved, not_saved = self.save_files(
+        save_images = self.save_jpeg_value
+        save_extensions = {
+            "csv": save_spectra,
+            "jpeg": save_images,
+        }
+        saved, not_saved, unsuccessful = self.save_files(
             pdzs=pdzs,
             exists=exists,
             overwrite=overwrite,
-            save_spectra=save_spectra,
-            save_images=save_images)
+            save_extensions=save_extensions)
         title = self._window.title()
-        n = len(saved) + len(not_saved)
-        s = "s" if n > 1 else ""
-        if saved:
-            message = ""
-            if n > 1:
-                message += f"{len(saved)} of {n} "
-            message += f"PDZ{s} successfully extracted and saved:\n\n"
-            for file in saved:
-                message += f"    {file}\n"
-            message += "\n"
-            showinfo(title, message)
-        if not_saved:
-            message = ""
-            if n > 1:
-                message += f"{len(not_saved)} of {n} "
-            message += f"PDZ{s} not successfully extracted and saved:\n\n"
-            for file in not_saved:
-                message += f"    {file}\n"
-            message += "\n"
-            message += "Extraction is skipped if a CSV or JPEG from a PDZ already exists. Override this behavior by checking the 'Overwrite existing' box."
-            showwarning(title, message)
+
+        for (extension, saved_filenames), not_saved_filenames, unsuccessful_filenames in zip(saved.items(), not_saved.values(), unsuccessful.values()):
+            ns = len(saved_filenames)
+            nns = len(not_saved_filenames)
+            nu = len(unsuccessful_filenames)
+            n = ns + nns + nu
+            ext = extension.upper()
+            if saved_filenames:
+                message = f"{ext}s extracted and saved from {ns} of {n} PDZs:\n\n"
+                for file in saved_filenames:
+                    message += f"    {file}\n"
+                showinfo(title, message)
+            if not_saved_filenames:
+                message = f"{ext}s not saved from {nns} of {n} PDZs:\n\n"
+                for file in not_saved_filenames:
+                    message += f"    {file}\n"
+                message += "\n"
+                message += f"{extension.upper()} saving is skipped for a PDZ if a {extension.upper()} from it already exists. Override this behavior by checking the 'Overwrite existing' box."
+                showwarning(title, message)
+            if unsuccessful_filenames:
+                message = f"{ext}s not extracted from {nu} of {n} PDZs:\n\n"
+                for file in unsuccessful_filenames:
+                    message += f"    {file}\n"
+                message += "\n"
+                message += f"This is (likely) because {ext}s were not found in"
+                if len(unsuccessful_filenames) > 1:
+                    message += " those PDZs."
+                else:
+                    message += " that PDZ."
+                showwarning(title, message)
         self.update()
 
-    def save_files(self, pdzs: list=[], exists: list=[], overwrite: bool=False, save_spectra: bool=True, save_images: bool=True):
-        saved = []
-        not_saved = []
-        if len(pdzs) != len(exists):
-            not_saved = [(pdz.pdz_file_name + '.pdz') for pdz in pdzs]
-            return saved, not_saved
+    def save_files(self, pdzs: list = [], exists: list = [], overwrite: dict = {}, save_extensions: dict = {}):
+        saved = {}
+        not_saved = {}
+        unsuccessful = {}
+        for extension in self._extensions:
+            saved[extension] = []
+            not_saved[extension] = []
+            unsuccessful[extension] = []
         for pdz, exist in zip(pdzs, exists):
             file_name = (pdz.pdz_file_name + '.pdz')
-            if any(exist) and not overwrite:
-                not_saved.append(file_name)
-            else:
-                self.save_spectra_and_images(pdz, save_spectra, save_images)
-                saved.append(file_name)
-        return saved, not_saved
-    
+            for extension, exists in exist.items():
+                if save_extensions[extension]:
+                    if (any(exists) and not overwrite):
+                        not_saved[extension].append(file_name)
+                    else:
+                        if extension == "csv":
+                            successful = self.save_spectra(pdz)
+                        if extension == "jpeg":
+                            successful = self.save_images(pdz)
+
+                        if successful:
+                            saved[extension].append(file_name)
+                        else:
+                            unsuccessful[extension].append(file_name)
+        return saved, not_saved, unsuccessful
+
     @property
     def save_csv_value(self):
         return self._save_csv_value.get()
-    
+
     @property
-    def save_jpg_value(self):
-        return self._save_jpg_value.get()
-    
+    def save_jpeg_value(self):
+        return self._save_jpeg_value.get()
+
     @property
     def overwrite_value(self):
         return self._overwrite_value.get()
 
-    def save_spectra_and_images(self, pdz: PDZTool, save_spectra: bool=True, save_images: bool=True):
+    def save_spectra(self, pdz: PDZTool):
         directory_path = Path(pdz.file_path).parent
         record_names = pdz.record_names
-        parsed_data = pdz.parsed_data
         csv_suffix = self._csv_suffix
-        image_suffix = self._image_suffix
         image_record_name = self._image_record_name
 
-        if save_spectra:
-            record_names_without_image = [x for x in record_names if x != image_record_name]
+        record_names_without_image = [
+            x for x in record_names if x != image_record_name
+            ]
+        try:
             pdz.save_csv(
                 output_dir=directory_path,
                 record_names=record_names_without_image,
+                include_channel_start_kev=True,
                 output_suffix=csv_suffix
                 )
-            
-        if save_images:
-            image_record = parsed_data.get(image_record_name, 0)
-            if image_record:
-                pdz.save_images(
-                    output_dir=directory_path,
-                    output_suffix=image_suffix
-                    )
+            return True
+        except:
+            return False
 
-        
+    def save_images(self, pdz: PDZTool):
+        directory_path = Path(pdz.file_path).parent
+        parsed_data = pdz.parsed_data
+        image_suffix = self._image_suffix
+        image_record_name = self._image_record_name
+
+        image_record = parsed_data.get(image_record_name, 0)
+        if image_record:
+            pdz.save_images(
+                output_dir=directory_path,
+                output_suffix=image_suffix
+                )
+            return True
+        else:
+            return False
+
     def update_extract_and_save_button(self):
         button = self._extract_and_save_button
 
         files = self.pdz_file_paths
 
         save_csv = self.save_csv_value
-        save_jpg = self.save_jpg_value
-        
+        save_jpeg = self.save_jpeg_value
+
         overwrite_existing = self.overwrite_value
-        existing_csv = False
-        existing_jpg = False
-        
-        if files and any([save_csv, save_jpg]):
-            if any([existing_csv, existing_jpg]) and not overwrite_existing:
-                button.state(["disabled"])
-            else:
-                button.state(["!disabled"])
+
+        csvs_to_extract = 0
+        jpegs_to_extract = 0
+        for filenames in self.predicted_output_filenames:
+            csvs_to_extract += len(filenames["csv"])
+            jpegs_to_extract += len(filenames["jpeg"])
+
+        exists_filenames, _ = self.exists_output_filenames
+        all_csvs_exist = True
+        all_jpegs_exist = True
+        for filenames in exists_filenames:
+            if len(filenames["csv"]) > 0:
+                all_csvs_exist *= all(filenames["csv"])
+            if len(filenames["jpeg"]) > 0:
+                all_jpegs_exist *= all(filenames["jpeg"])
+
+        disable_button = True
+
+        if files and any([save_csv, save_jpeg]):
+            disable_button = False
+            if not save_csv:
+                if not jpegs_to_extract:
+                    disable_button = True
+                if all_jpegs_exist and not overwrite_existing:
+                    disable_button = True
+            if not save_jpeg:
+                if not csvs_to_extract:
+                    disable_button = True
+                if all_csvs_exist and not overwrite_existing:
+                    disable_button = True
+            if all_csvs_exist and all_jpegs_exist and not overwrite_existing:
+                disable_button = True
+
+        button.state(["disabled"]) if disable_button else button.state(["!disabled"])
+
+        if csvs_to_extract:
+            self._save_csv_checkbox.state(["!disabled"])
         else:
-            button.state(["disabled"])
+            self._save_csv_checkbox.state(["disabled"])
+            self._save_csv_value.set(False)
+        if jpegs_to_extract:
+            self._save_jpeg_checkbox.state(["!disabled"])
+        else:
+            self._save_jpeg_checkbox.state(["disabled"])
+            self._save_jpeg_value.set(False)
+
+        save_csv = self.save_csv_value
+        save_jpeg = self.save_jpeg_value
+
+        s = "s" if len(files) > 1 else ""
+        if save_csv and not save_jpeg:
+            text = f"Extract & Save CSV{s}"
+        elif save_jpeg and not save_csv:
+            text = f"Extract & Save Images"
+        elif save_csv and save_jpeg:
+            text = f"Extract & Save All"
+        else:
+            text = self._extract_and_save_default_text
+
+        button.configure(text=text)
 
     def draw_about_button(self, row: int):
         col = -1
@@ -575,15 +690,15 @@ class PdzToolGui(tk.Frame):
     def show_about(self):
         title = self._window.title()
         showinfo(title,
-                 """pdz-tool GUI
+                 """PDZ Extractor: GUI for pdz-tool
 
-https://github.com/olive-groves/pdz-tool-gui
+https://github.com/olive-groves/pdz-extractor
 
 MIT License
 
-pdz-tool Copyright (c) 2024 Bruno Ducraux (github.com/bducraux), changes made by Lars Maxfield (github.com/larsmaxfield)
+pdz-tool Copyright (c) 2024 Bruno Ducraux (github.com/bducraux) with e changes made by Lars Maxfield (github.com/larsmaxfield)
 
-Interface created by Lars Maxfield (github.com/larsmaxfield)
+User interface created by Lars Maxfield (github.com/larsmaxfield)
 
 Image extraction adapted from read_pdz Copyright (c) 2024 Frank Ligterink (github.com/fligt)
 

@@ -1,4 +1,4 @@
-"""Run the pdz-tool interface. 
+"""Run the PDZ Extractor interface.
 """
 
 
@@ -11,7 +11,7 @@ from interfaces import PdzToolGui
 
 def main():
     window = tk.Tk()
-    window.title("pdz-tool GUI")
+    window.title("PDZ Extractor: GUI for pdz-tool")
     window.geometry('780x600')
 
     # Set icon based on operating system
