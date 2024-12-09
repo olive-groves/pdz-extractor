@@ -558,17 +558,19 @@ class PdzToolGui(tk.Frame):
         csv_suffix = self._csv_suffix
         image_record_name = self._image_record_name
 
-        record_names_without_image = [x for x in record_names if x != image_record_name]
+        record_names_without_image = [
+            x for x in record_names if x != image_record_name
+            ]
         try:
             pdz.save_csv(
                 output_dir=directory_path,
                 record_names=record_names_without_image,
+                include_channel_start_kev=True,
                 output_suffix=csv_suffix
                 )
             return True
         except:
             return False
-        
 
     def save_images(self, pdz: PDZTool):
         directory_path = Path(pdz.file_path).parent
