@@ -116,6 +116,10 @@ For macOS:
 pyinstaller --windowed --icon=icon.icns --add-data=\absolute\path\to\source\icon.icns;. main.py
 ```
 
+The terminating `;.` in the `add-data` path is necessary. The period
+`.` indicates the directory in which to add the data, here root.
+If the icons are moved to a subdirectory, this `.` will need to be replaced by
+that subdirectory path.
 
 ## Credits
 
@@ -127,8 +131,3 @@ User interface created by [Lars Maxfield](https://github.com/larsmaxfield)
 Image extraction adapted from `read_pdz` by [Frank Ligterink](https://github.com/fligt)
 
 Icon by Good Stuff Non Sense, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
-
-The terminating `;.` in the `add-data` path is necessary.
-`.` indicates the directory in which to add the data, here root.
-If the icons are moved to a subdirectory, this `.` will need to be replaced by
-that subdirectory path.
