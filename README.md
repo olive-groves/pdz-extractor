@@ -14,7 +14,7 @@ You can download and run PDZ Extractor as a [Windows executable](#windows-execut
 
 ### Windows executable
 
-For Windows, PDZ Extractor runs as a portable executable (EXE). It does not install to your computer, but rather runs as a self-contained application.
+For Windows, PDZ Extractor is available as a portable executable that runs by directly double-clicking or running from the command prompt. No installation is required.
 
 Here's how:
 
@@ -51,7 +51,7 @@ If double-clicking the executable doesn’t work, try running it via the command
 
 >*Not possible? You can try running on a virtual machine or contacting your machine admin.*
 
-You can find various ways online on how to run an executable (EXE) via the command prompt, but I prefer these steps:
+You can find various ways online on how to run an executable via the command prompt, but I prefer these steps:
 
 1. Copy the path of the executable:
    - **Right-click** the file. (On Windows 10, press and hold the `Shift` key and then **right-click** the file.)
