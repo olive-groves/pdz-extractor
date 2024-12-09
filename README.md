@@ -1,7 +1,9 @@
 # PDZ Extractor: GUI for `pdz-tool`
 ![Logo for PDZ Extractor, an illustration of a sci-fi ray-blaster.](source/icon.svg)
 
-User interface for [`pdz-tool`](https://github.com/bducraux/pdz-tool) which converts Bruker XRF spectral data PDZ files to open CSV and JPEG formats.
+User interface for [`pdz-tool`](https://github.com/bducraux/pdz-tool) which converts Bruker XRF* spectral data PDZ files to open CSV and JPEG formats.
+
+*Tested on PDZ files from Bruker Tracer 5i Handheld XRF.
 
 ![Interface of PDZ Extractor showing a folder of PDZs files and their output spectra and image files.](source/screenshot.png)
 
