@@ -6,6 +6,7 @@ from tkinter.messagebox import showinfo, showwarning
 from tkinter.scrolledtext import ScrolledText
 from tkinter import filedialog
 
+from main import VERSION
 from pdz_tool_extended.pdz_tool import PDZTool
 from paths import create_folders, get_likenamed_filepaths_with_extension, get_filepaths_with_extension_in_directory
 
@@ -690,7 +691,9 @@ class PdzToolGui(tk.Frame):
     def show_about(self):
         title = self._window.title()
         showinfo(title,
-                 """PDZ Extractor: GUI for pdz-tool
+                 f"""PDZ Extractor: GUI for pdz-tool
+
+Version {VERSION}
 
 https://github.com/olive-groves/pdz-extractor
 

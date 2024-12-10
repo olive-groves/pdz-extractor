@@ -9,6 +9,9 @@ import tkinter as tk
 from interfaces import PdzToolGui
 
 
+VERSION = "1.0"
+
+
 def main():
     window = tk.Tk()
     window.title("PDZ Extractor: GUI for pdz-tool")
