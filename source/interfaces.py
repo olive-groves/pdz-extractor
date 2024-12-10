@@ -6,9 +6,11 @@ from tkinter.messagebox import showinfo, showwarning
 from tkinter.scrolledtext import ScrolledText
 from tkinter import filedialog
 
-from main import VERSION
 from pdz_tool_extended.pdz_tool import PDZTool
 from paths import create_folders, get_likenamed_filepaths_with_extension, get_filepaths_with_extension_in_directory
+
+
+VERSION = "1.0"
 
 
 class BetterScrolledText(ScrolledText):
@@ -699,7 +701,7 @@ https://github.com/olive-groves/pdz-extractor
 
 MIT License
 
-pdz-tool Copyright (c) 2024 Bruno Ducraux (github.com/bducraux) with e changes made by Lars Maxfield (github.com/larsmaxfield)
+pdz-tool Copyright (c) 2024 Bruno Ducraux (github.com/bducraux) with extended features and fixes by Lars Maxfield (github.com/larsmaxfield)
 
 User interface created by Lars Maxfield (github.com/larsmaxfield)
 
