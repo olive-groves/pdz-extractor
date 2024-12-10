@@ -10,6 +10,9 @@ from pdz_tool_extended.pdz_tool import PDZTool
 from paths import create_folders, get_likenamed_filepaths_with_extension, get_filepaths_with_extension_in_directory
 
 
+VERSION = "1.0"
+
+
 class BetterScrolledText(ScrolledText):
     def __init__(self, window=None):
         super().__init__(master=window)
@@ -690,13 +693,15 @@ class PdzToolGui(tk.Frame):
     def show_about(self):
         title = self._window.title()
         showinfo(title,
-                 """PDZ Extractor: GUI for pdz-tool
+                 f"""PDZ Extractor: GUI for pdz-tool
+
+Version {VERSION}
 
 https://github.com/olive-groves/pdz-extractor
 
 MIT License
 
-pdz-tool Copyright (c) 2024 Bruno Ducraux (github.com/bducraux) with e changes made by Lars Maxfield (github.com/larsmaxfield)
+pdz-tool Copyright (c) 2024 Bruno Ducraux (github.com/bducraux) with extended features and fixes by Lars Maxfield (github.com/larsmaxfield)
 
 User interface created by Lars Maxfield (github.com/larsmaxfield)
 
